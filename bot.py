@@ -39,7 +39,9 @@ class MyClient(discord.Client):
         if target_channel == None:
             return
 
-        await target_channel.send(f"Upcoming Game {game}")
+        msg = await target_channel.send(f"Upcoming Game {game}")
+        await msg.add_reaction('1️⃣')
+        await msg.add_reaction('2️⃣')
 
     async def api_update(self):
 
@@ -65,14 +67,31 @@ class MyClient(discord.Client):
         await self.api_update()
         print("Logged on as ", self.user)
         self.write_to_channel.start()
+        self.read_channel.start()
 
     async def on_message(self, message):
         if message.author == self.user:
+            print(message.reactions)
             return
 
     @tasks.loop(hours=1)
     async def write_to_channel(self):
         await self.api_update()
+
+    async def read_channel(self):
+        channels = client.get_all_channels()
+        for channel in channels:
+            if channel.name == 'esport':
+                target_channel = channel
+        if target_channel == None:
+            return
+        print(target_channel.id)
+        msg = [message async for message in target_channel.history(limit=10)]
+        for m in msg:
+            if(len(m.reactions) == 0):
+                await m.add_reaction('1️⃣') #🗿
+                #await m.remove_reaction('👍', self.user)
+            
 
 
 intents = discord.Intents.default()
