@@ -11,14 +11,39 @@ import os
 
 dotenv.load_dotenv()
 
-LEAGUES = ["LEC", ]
+LEAGUES = ["LEC", "LCK", "LPL", "LCS", "MSI", "Worlds"]
 GAMES_FILE = "upcoming_games.pkl"
+BET_FILE = "bets.csv"
 
 
 class MyClient(discord.Client):
     def __init__(self, *, intents: Intents, **options: Any) -> None:
         self.lol_api = lol_esport_api.Api()
+        self.read_games_data()
         super().__init__(intents=intents, **options)
+
+    def read_bet_data(self):
+        if not os.path.isfile():
+            self.bets = pd.DataFrame(
+                columns=['nickname', 'id', 'correct', 'incorrect'])
+            return
+        with open(BET_FILE, 'r') as file:
+            self.bets = pd.read_csv(file)
+
+    def write_bet_data(self):
+
+        with open(BET_FILE, 'w') as file:
+            self.bets.to_csv(file)
+
+    def update_bet_user(self, user: discord.client.User, bet_hit: bool):
+
+        if not any(self.bets.id == user.id):
+            self.bets = self.bets.append(pd.DataFrame([[user.name, user.id, 0, 0]], columns=[
+                                         'nickname', 'id', 'correct', 'incorrect']))
+        if bet_hit:
+            self.bets.loc[(self.id == user.id), 'correct'] += 1
+        else:
+            self.bets.loc[(self.id == user.id), 'incorrect'] += 1
 
     def read_games_data(self):
         if not os.path.isfile(GAMES_FILE):
@@ -43,7 +68,6 @@ class MyClient(discord.Client):
 
     async def api_update(self):
 
-        self.read_games_data()
         self.leagues = self.lol_api.get_leagues()
         upcoming_games = []
         for league in LEAGUES:
