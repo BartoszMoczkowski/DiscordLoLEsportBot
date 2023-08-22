@@ -48,15 +48,38 @@ class Match():
         self.team2 = Team(dict["match"]["teams"][1])
 
     def __str__(self) -> str:
+
         return f"{self.league} {self.block_name}\n\
         {self.start_time}\n\
-        {self.team1} {self.team1.game_wins}-{self.team2.game_wins} {self.team2}\n"
+        {self.team1}  {self.team2}\n"
 
     def __repr__(self) -> str:
         return str(self)
 
     def __eq__(self, __value: object) -> bool:
         return self.id == __value.id
+
+    def upcoming_string_format(self):
+        if not self.team1.name == "TBD":
+            team1_str = f"{self.team1.record_wins}-{self.team1.record_losses} {self.team1.name}"
+        else:
+            team1_str = f"{self.team1.name}"
+        if not self.team2.name == "TBD":
+            team2_str = f"{self.team1.name} {self.team2.record_wins}-{self.team2.record_losses}"
+
+        else:
+            team2_str = f"{self.team2.name}"
+
+        return f"{self.league} {self.block_name}\n\
+        {self.start_time}\n\
+         {team1_str} vs {team2_str}\n"
+
+    def finished_string_format(self):
+        if self.team1.name == 'TBD' or self.team2.name == "TBD":
+            print("finished games should not have TBD teams!")
+        return f"{self.league} {self.block_name}\n\
+        {self.start_time}\n\
+        {self.team1.record_wins}-{self.team1.record_losses} {self.team1.name} {self.team1.game_wins}-{self.team2.game_wins} {self.team1.name} {self.team2.record_wins}-{self.team2.record_losses}\n"
 
 
 class Api():
