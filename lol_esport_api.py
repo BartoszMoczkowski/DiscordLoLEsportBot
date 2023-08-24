@@ -15,7 +15,9 @@ GET_TEAMS = "getTeams"
 
 
 class Team():
-    def __init__(self, dict) -> None:
+    def __init__(self, dict, test=False) -> None:
+        if test:
+            return
         self.name = dict['name']
         self.image = dict['image']
         if self.name == 'TBD':
@@ -24,6 +26,15 @@ class Team():
         self.game_wins = dict['result']['outcome']
         self.record_wins = dict['record']['wins']
         self.record_losses = dict['record']['losses']
+
+    def create_test_team(self):
+        self.name = 'name'
+        self.image = 'img'
+        self.result = 'None'
+        self.game_wins = 0
+        self.record_losses = 0
+        self.record_wins = 0
+        return self
 
     def __str__(self) -> str:
         if self.name == "TBD":
@@ -35,7 +46,9 @@ class Team():
 
 
 class Match():
-    def __init__(self, dict) -> None:
+    def __init__(self, dict, test=False) -> None:
+        if test:
+            return
         time_format_zulu = dict['startTime'].replace(
             "T", " ").replace("Z", " UTC")
         self.start_time = datetime.strptime(
@@ -46,6 +59,24 @@ class Match():
         self.id = dict["match"]["id"]
         self.team1 = Team(dict["match"]["teams"][0])
         self.team2 = Team(dict["match"]["teams"][1])
+
+    def create_test_upcoming(self) -> None:
+        self.start_time = datetime.now()
+        self.state = 'upcoming'
+        self.block_name = 'block_name'
+        self.league = 'league'
+        self.id = '-1'
+        self.team1 = Team({}, True).create_test_team()
+        self.team2 = Team({}, True).create_test_team()
+
+    def create_test_completed(self) -> None:
+        self.start_time = datetime.now()
+        self.state = 'completed'
+        self.block_name = 'block_name'
+        self.league = 'league'
+        self.id = '-1'
+        self.team1 = Team({}, True).create_test_team()
+        self.team2 = Team({}, True).create_test_team()
 
     def __str__(self) -> str:
 
@@ -65,7 +96,7 @@ class Match():
         else:
             team1_str = f"{self.team1.name}"
         if not self.team2.name == "TBD":
-            team2_str = f"{self.team1.name} {self.team2.record_wins}-{self.team2.record_losses}"
+            team2_str = f"{self.team2.name} {self.team2.record_wins}-{self.team2.record_losses}"
 
         else:
             team2_str = f"{self.team2.name}"
@@ -77,8 +108,10 @@ class Match():
     def finished_string_format(self):
         if self.team1.name == 'TBD' or self.team2.name == "TBD":
             print("finished games should not have TBD teams!")
+        winning_team = f"{self.team1.name if self.team1.result.lower() == 'win' else self.team2.name}"
         return f"{self.league} {self.block_name}\n\
         {self.start_time}\n\
+        result {winning_team} wins\n\
         {self.team1.record_wins}-{self.team1.record_losses} {self.team1.name} {self.team1.game_wins}-{self.team2.game_wins} {self.team1.name} {self.team2.record_wins}-{self.team2.record_losses}\n"
 
 
@@ -92,7 +125,7 @@ class Api():
         leagues_json = json.loads(response.content)['data']['leagues']
         return {league['name']: league['id'] for league in leagues_json}
 
-    def get_schedule(self, league_id, upcoming=False):
+    def get_schedule(self, league_id):
         query_parameters = self.default_query_parameters
         query_parameters['leagueId'] = league_id
         response = requests.api.get(
@@ -102,10 +135,31 @@ class Api():
         )
         matches_json = json.loads(response.content)[
             'data']['schedule']['events']
-        if upcoming:
-            matches_json = list(
-                filter(lambda match: match['state'] != 'completed', matches_json))
-        return [Match(match) for match in matches_json]
+        matches_upcoming = []
+        matches_resolved = []
+        for match in matches_json:
+            if match['match']['teams'][0]['name'] == "TBD":
+                continue
+
+            if match['match']['teams'][1]['name'] == "TBD":
+                continue
+
+            if match['state'] != 'completed':
+                matches_upcoming.append(Match(match))
+                continue
+            matches_resolved.append(Match(match))
+        games = {'upcoming': matches_upcoming, 'resolved': matches_resolved}
+        return games
+
+    def get_test_schedule_start(self):
+        match = Match({}, test=True)
+        match.create_test_upcoming()
+        return {'upcoming': [match], 'resolved': []}
+
+    def get_test_schedule_end(self):
+        match = Match({}, test=True)
+        match.create_test_completed()
+        return {'upcoming': [], 'resolved': [match]}
 
 
 if __name__ == "__main__":
